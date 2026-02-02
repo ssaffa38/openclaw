@@ -1,0 +1,33 @@
+{
+  "id": "sahr-finance-sync",
+  "name": "Sahr Finance Sync",
+  "description": "Sync Sahr Auto Detailing bookings and revenue to Saffa Finances dashboard",
+  "version": "1.0.0",
+  "skills": ["sahr-finance-sync"],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "enabled": {
+        "type": "boolean",
+        "description": "Enable/disable finance sync tools",
+        "default": true
+      },
+      "entityId": {
+        "type": "string",
+        "description": "Entity ID for Sahr Auto in finances",
+        "default": "sahr-auto"
+      },
+      "defaultAccount": {
+        "type": "string",
+        "description": "Default account for deposits",
+        "default": "sahr-etransfer"
+      },
+      "autoSync": {
+        "type": "boolean",
+        "description": "Automatically create transactions when bookings complete",
+        "default": false
+      }
+    }
+  }
+}
