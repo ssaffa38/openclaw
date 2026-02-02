@@ -1,0 +1,35 @@
+{
+  "id": "sahr-scheduler",
+  "name": "Sahr Scheduler",
+  "description": "Appointment scheduling, availability checking, and automated reminders for Sahr Auto Detailing",
+  "version": "1.0.0",
+  "skills": ["sahr-scheduler"],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "enabled": {
+        "type": "boolean",
+        "description": "Enable/disable scheduling tools",
+        "default": true
+      },
+      "defaultServiceDuration": {
+        "type": "number",
+        "description": "Default service duration in minutes",
+        "default": 180
+      },
+      "workingHours": {
+        "type": "object",
+        "properties": {
+          "start": { "type": "number", "default": 9 },
+          "end": { "type": "number", "default": 21 }
+        }
+      },
+      "rebookingWindowDays": {
+        "type": "number",
+        "description": "Days ahead to suggest rebooking",
+        "default": 42
+      }
+    }
+  }
+}
