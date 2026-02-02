@@ -1,0 +1,14 @@
+{
+  "name": "@clawdbot/sahr-chat-parser",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Parse iMessage/SMS chat screenshots into CRM data for Sahr Auto Detailing",
+  "author": "Saffa & Company",
+  "license": "MIT",
+  "dependencies": {
+    "@sinclair/typebox": "0.34.47"
+  },
+  "clawdbot": {
+    "extensions": ["./index.ts"]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "id": "sahr-chat-parser",
+  "name": "Sahr Chat Parser",
+  "description": "Parse iMessage/SMS screenshots into structured CRM data",
+  "version": "1.0.0",
+  "skills": ["sahr-chat-parser"],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "enabled": {
+        "type": "boolean",
+        "description": "Enable/disable chat parsing tools",
+        "default": true
+      },
+      "autoCreateRecords": {
+        "type": "boolean",
+        "description": "Automatically create CRM records from parsed data",
+        "default": false
+      }
+    }
+  }
+}
