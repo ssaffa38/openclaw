@@ -1,7 +1,23 @@
 ---
 name: email-receipt
 description: "Process forwarded email receipts and invoices to add transactions to Saffa Finances. Forward receipts/invoices to ct2@ctribefestival.com or share email screenshots in Discord."
-metadata: {"clawdbot":{"emoji":"📧","triggers":["forwarded receipt","email receipt","invoice email","forward this receipt","process this invoice","add this invoice","email expense"]}}
+metadata:
+  {
+    "clawdbot":
+      {
+        "emoji": "📧",
+        "triggers":
+          [
+            "forwarded receipt",
+            "email receipt",
+            "invoice email",
+            "forward this receipt",
+            "process this invoice",
+            "add this invoice",
+            "email expense",
+          ],
+      },
+  }
 ---
 
 # Email Receipt Capture
@@ -32,6 +48,7 @@ Emails forwarded to **ct2@ctribefestival.com** are monitored. When a receipt/inv
 ### Prerequisites
 
 1. **gog CLI** must be installed and authenticated:
+
    ```bash
    brew install steipete/tap/gogcli
    gog auth credentials /path/to/client_secret.json
@@ -45,6 +62,7 @@ Emails forwarded to **ct2@ctribefestival.com** are monitored. When a receipt/inv
 User can ask: "Check for forwarded receipts" or "Any new invoices?"
 
 CT2 will search recent emails:
+
 ```bash
 gog gmail messages search "to:ct2@ctribefestival.com newer_than:1d" --max 10 --account us@ctribefestival.com
 ```
@@ -64,6 +82,7 @@ When you receive a forwarded email or screenshot:
 ### Step 2: Extract Details
 
 Parse the email for:
+
 - **Merchant/Vendor**: Company name (from header, logo, or email domain)
 - **Date**: Invoice date, transaction date, or email date
 - **Amount**: Total amount due/paid
@@ -130,16 +149,19 @@ gog gmail attachments download <messageId> <attachmentId> --out /tmp/invoice.pdf
 ## Attachment Handling
 
 ### PDF Invoices
+
 - Download the PDF attachment
 - Extract text/data from the PDF
 - Look for: Total, Amount Due, Invoice Total, Grand Total
 
 ### Image Attachments
+
 - Download the image
 - Use vision capabilities to extract text
 - Same extraction logic as receipt-capture skill
 
 ### Email Body
+
 - Parse HTML/plain text for transaction details
 - Look for structured data (tables, lists)
 - Extract from confirmation templates (Stripe, PayPal, etc.)
@@ -148,18 +170,18 @@ gog gmail attachments download <messageId> <attachmentId> --out /tmp/invoice.pdf
 
 **IMPORTANT**: Always ask user to confirm or specify the business entity. Multiple can be selected if expense is shared.
 
-| Entity ID | Short Name | Type | Keywords/Context |
-|-----------|------------|------|------------------|
-| `sahr-auto` | Sahr Auto | business | sahr, auto, detailing, car wash, mobile detailing, cleaning supplies |
-| `ct-networks` | CT Net | business | ct networks, consulting, tech services, software dev |
-| `ctribe-profit` | C-Tribe | business | ctribe, festival, event production (for-profit side) |
-| `ctribe-nonprofit` | C-Tribe NP | nonprofit | ctribe foundation, grants, nonprofit programs |
-| `cotton-tree-vs` | CTVS | holding | venture studios, investments, holding company |
-| `nimbus-creative` | Nimbus | business | nimbus, creative agency, design, US clients |
-| `revive-ai` | Revive | investment | revive, AI platform |
-| `black-talent-initiative` | BTI | charity | bti, black talent, board expenses |
-| `cappsule` | Cappsule | business | cappsule, app |
-| `personal` | Personal | personal | groceries, personal items, home |
+| Entity ID                 | Short Name | Type       | Keywords/Context                                                     |
+| ------------------------- | ---------- | ---------- | -------------------------------------------------------------------- |
+| `sahr-auto`               | Sahr Auto  | business   | sahr, auto, detailing, car wash, mobile detailing, cleaning supplies |
+| `ct-networks`             | CT Net     | business   | ct networks, consulting, tech services, software dev                 |
+| `ctribe-profit`           | C-Tribe    | business   | ctribe, festival, event production (for-profit side)                 |
+| `ctribe-nonprofit`        | C-Tribe NP | nonprofit  | ctribe foundation, grants, nonprofit programs                        |
+| `cotton-tree-vs`          | CTVS       | holding    | venture studios, investments, holding company                        |
+| `nimbus-creative`         | Nimbus     | business   | nimbus, creative agency, design, US clients                          |
+| `revive-ai`               | Revive     | investment | revive, AI platform                                                  |
+| `black-talent-initiative` | BTI        | charity    | bti, black talent, board expenses                                    |
+| `cappsule`                | Cappsule   | business   | cappsule, app                                                        |
+| `personal`                | Personal   | personal   | groceries, personal items, home                                      |
 
 **Note**: Transactions can have **multiple entities** if the expense is shared.
 
@@ -167,20 +189,21 @@ gog gmail attachments download <messageId> <attachmentId> --out /tmp/invoice.pdf
 
 **CRITICAL**: Always identify which card/account the expense came from. For email invoices, this may not be visible - ASK the user.
 
-| Account ID | Name | Last 4 | Bank | Entity | Currency |
-|------------|------|--------|------|--------|----------|
-| `amex-platinum-72000` | Amex Platinum | 2000 | Amex | personal | CAD |
-| `amex-cobalt-13005` | Amex Cobalt | 3005 | Amex | personal | CAD |
-| `capitalone-mc-7798` | Capital One MC | 7798 | Capital One | personal | CAD |
-| `capitalone-mc-8048` | Capital One MC #2 | 8048 | Capital One | personal | CAD |
-| `rbc-chequing-95` | RBC Chequing | 1595 | RBC | personal | CAD |
-| `rbc-chequing-95` | RBC Visa Debit | 1886 | RBC | personal | CAD |
-| `rbc-house-6234` | RBC House | 6234 | RBC | personal | CAD |
-| `atb-ctribe-np-7779` | C-Tribe NP Chequing | 7779 | ATB | ctribe-nonprofit | CAD |
-| `mercury-nimbus-2442` | Nimbus Checking | 2442 | Mercury | nimbus-creative | USD |
-| `sahr-auto-cash` | Sahr Cash | CASH | Cash | sahr-auto | CAD |
+| Account ID            | Name                | Last 4 | Bank        | Entity           | Currency |
+| --------------------- | ------------------- | ------ | ----------- | ---------------- | -------- |
+| `amex-platinum-72000` | Amex Platinum       | 2000   | Amex        | personal         | CAD      |
+| `amex-cobalt-13005`   | Amex Cobalt         | 3005   | Amex        | personal         | CAD      |
+| `capitalone-mc-7798`  | Capital One MC      | 7798   | Capital One | personal         | CAD      |
+| `capitalone-mc-8048`  | Capital One MC #2   | 8048   | Capital One | personal         | CAD      |
+| `rbc-chequing-95`     | RBC Chequing        | 1595   | RBC         | personal         | CAD      |
+| `rbc-chequing-95`     | RBC Visa Debit      | 1886   | RBC         | personal         | CAD      |
+| `rbc-house-6234`      | RBC House           | 6234   | RBC         | personal         | CAD      |
+| `atb-ctribe-np-7779`  | C-Tribe NP Chequing | 7779   | ATB         | ctribe-nonprofit | CAD      |
+| `mercury-nimbus-2442` | Nimbus Checking     | 2442   | Mercury     | nimbus-creative  | USD      |
+| `sahr-auto-cash`      | Sahr Cash           | CASH   | Cash        | sahr-auto        | CAD      |
 
 **Account Detection Tips**:
+
 - Look for last 4 digits in email (e.g., "Charged to card ending in 2000")
 - **Visa ending in 1886** = RBC Chequing (Visa Debit)
 - USD invoices often come from Mercury (Nimbus)
@@ -188,20 +211,38 @@ gog gmail attachments download <messageId> <attachmentId> --out /tmp/invoice.pdf
 
 ## Category Matching
 
-| Keywords | Category |
-|----------|----------|
-| api, subscription, saas, software, cloud, anthropic, openai | `software` |
-| hosting, domain, server, aws, vercel, cloudflare | `hosting` |
-| ads, advertising, meta, google ads, facebook | `advertising` |
-| supplies, equipment, materials | `supplies` |
-| travel, flight, hotel, airbnb, uber, air canada | `travel` |
-| food, restaurant, doordash, uber eats | `meals` |
-| phone, internet, utilities, telus, shaw | `utilities` |
-| insurance, liability | `insurance` |
+| Keywords                                                    | Category      |
+| ----------------------------------------------------------- | ------------- |
+| api, subscription, saas, software, cloud, anthropic, openai | `software`    |
+| hosting, domain, server, aws, vercel, cloudflare            | `hosting`     |
+| ads, advertising, meta, google ads, facebook                | `advertising` |
+| supplies, equipment, materials                              | `supplies`    |
+| travel, flight, hotel, airbnb, uber, air canada             | `travel`      |
+| food, restaurant, doordash, uber eats                       | `meals`       |
+| phone, internet, utilities, telus, shaw                     | `utilities`   |
+| insurance, liability                                        | `insurance`   |
+
+## Currency Detection
+
+**IMPORTANT**: Always determine the currency. If unclear, ASK the user.
+
+| Indicator                                                    | Currency    |
+| ------------------------------------------------------------ | ----------- |
+| "CAD", "CA$", "CDN$", "C$"                                   | CAD         |
+| "USD", "US$", "U.S."                                         | USD         |
+| Canadian vendors (Telus, Shaw, ATB, etc.)                    | CAD         |
+| Mercury account charges                                      | USD         |
+| US-based SaaS (Anthropic, OpenAI, Vercel, AWS, Stripe, etc.) | Usually USD |
+
+**If the invoice just shows "$" with no country indicator:**
+
+- ASK: "Is this $XX.XX in CAD or USD?"
+- Don't assume - incorrect currency affects financial reporting
 
 ## Common Email Formats
 
 ### Stripe Receipts
+
 ```
 From: receipts@stripe.com
 Subject: Receipt from [Business Name]
@@ -210,6 +251,7 @@ Date: Receipt date in email body
 ```
 
 ### PayPal
+
 ```
 From: service@paypal.com
 Subject: Receipt for your payment to [Merchant]
@@ -218,6 +260,7 @@ Date: Transaction date
 ```
 
 ### Amazon
+
 ```
 From: auto-confirm@amazon.com / digital-no-reply@amazon.com
 Subject: Your Amazon order / Your Amazon.com order
@@ -226,6 +269,7 @@ Date: Order date
 ```
 
 ### Apple/App Store
+
 ```
 From: no_reply@email.apple.com
 Subject: Your receipt from Apple
@@ -234,6 +278,7 @@ Date: Receipt date
 ```
 
 ### Google/GCP
+
 ```
 From: payments-noreply@google.com
 Subject: Your Google Cloud invoice
@@ -249,7 +294,7 @@ Date: Invoice date
 {
   "date": "2026-02-05",
   "description": "Anthropic - Claude API usage January 2026",
-  "amount": -100.00,
+  "amount": -100.0,
   "category": "software",
   "entities": ["ct-networks"],
   "account": "amex-platinum-72000",
@@ -265,6 +310,7 @@ Date: Invoice date
 ```
 
 **Required fields**:
+
 - `date` - Transaction/invoice date
 - `description` - Merchant + brief description
 - `amount` - NEGATIVE for expenses
@@ -378,6 +424,7 @@ CT2: ✅ Saved both transactions!
 ## Notes
 
 - **IMPORTANT**: All invoices/receipts are EXPENSES - use NEGATIVE amounts
+- **IMPORTANT**: If currency is unclear (just "$" with no CAD/USD indicator), ASK before saving
 - Forward emails to ct2@ctribefestival.com for automatic processing
 - Screenshots work too - just send with "add this" or "log this"
 - Invoice numbers are stored in metadata for reference

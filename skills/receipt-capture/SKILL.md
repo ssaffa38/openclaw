@@ -1,7 +1,25 @@
 ---
 name: receipt-capture
 description: "Capture receipts and screenshots to add transactions to Saffa Finances. Send an image and say 'add this receipt', 'log this expense', or 'capture this transaction'."
-metadata: {"clawdbot":{"emoji":"🧾","triggers":["add receipt","log receipt","capture receipt","add this expense","scan receipt","receipt to finance","log this expense","add this to finance","capture transaction"]}}
+metadata:
+  {
+    "clawdbot":
+      {
+        "emoji": "🧾",
+        "triggers":
+          [
+            "add receipt",
+            "log receipt",
+            "capture receipt",
+            "add this expense",
+            "scan receipt",
+            "receipt to finance",
+            "log this expense",
+            "add this to finance",
+            "capture transaction",
+          ],
+      },
+  }
 ---
 
 # Receipt Capture
@@ -37,6 +55,7 @@ Capture receipts, invoices, and screenshots to automatically extract transaction
 ### Basic Receipt Capture
 
 Send an image and say:
+
 - "Add this receipt"
 - "Log this expense"
 - "Capture this to finance"
@@ -45,6 +64,7 @@ Send an image and say:
 ### With Entity Context
 
 Specify which business entity:
+
 - "Add this receipt - it's for CT Networks"
 - "Log this expense as Sahr Auto supplies"
 - "Capture this for ctribe festival"
@@ -52,6 +72,7 @@ Specify which business entity:
 ### With Category Override
 
 Specify the category:
+
 - "Add this receipt as software"
 - "Log this as marketing expense"
 
@@ -59,18 +80,18 @@ Specify the category:
 
 **IMPORTANT**: Always ask user to confirm or specify the business entity. Multiple can be selected if expense is shared.
 
-| Entity ID | Short Name | Type | Keywords/Context |
-|-----------|------------|------|------------------|
-| `sahr-auto` | Sahr Auto | business | sahr, auto, detailing, car wash, mobile detailing, cleaning supplies |
-| `ct-networks` | CT Net | business | ct networks, consulting, tech services, software dev |
-| `ctribe-profit` | C-Tribe | business | ctribe, festival, event production (for-profit side) |
-| `ctribe-nonprofit` | C-Tribe NP | nonprofit | ctribe foundation, grants, nonprofit programs |
-| `cotton-tree-vs` | CTVS | holding | venture studios, investments, holding company |
-| `nimbus-creative` | Nimbus | business | nimbus, creative agency, design, US clients |
-| `revive-ai` | Revive | investment | revive, AI platform |
-| `black-talent-initiative` | BTI | charity | bti, black talent, board expenses |
-| `cappsule` | Cappsule | business | cappsule, app |
-| `personal` | Personal | personal | groceries, personal items, home |
+| Entity ID                 | Short Name | Type       | Keywords/Context                                                     |
+| ------------------------- | ---------- | ---------- | -------------------------------------------------------------------- |
+| `sahr-auto`               | Sahr Auto  | business   | sahr, auto, detailing, car wash, mobile detailing, cleaning supplies |
+| `ct-networks`             | CT Net     | business   | ct networks, consulting, tech services, software dev                 |
+| `ctribe-profit`           | C-Tribe    | business   | ctribe, festival, event production (for-profit side)                 |
+| `ctribe-nonprofit`        | C-Tribe NP | nonprofit  | ctribe foundation, grants, nonprofit programs                        |
+| `cotton-tree-vs`          | CTVS       | holding    | venture studios, investments, holding company                        |
+| `nimbus-creative`         | Nimbus     | business   | nimbus, creative agency, design, US clients                          |
+| `revive-ai`               | Revive     | investment | revive, AI platform                                                  |
+| `black-talent-initiative` | BTI        | charity    | bti, black talent, board expenses                                    |
+| `cappsule`                | Cappsule   | business   | cappsule, app                                                        |
+| `personal`                | Personal   | personal   | groceries, personal items, home                                      |
 
 **Note**: Transactions can have **multiple entities** if the expense is shared (e.g., software used by both CT Networks and Nimbus).
 
@@ -78,20 +99,21 @@ Specify the category:
 
 **CRITICAL**: Always identify which card/account the expense came from based on receipt details.
 
-| Account ID | Name | Last 4 | Bank | Entity | Currency |
-|------------|------|--------|------|--------|----------|
-| `amex-platinum-72000` | Amex Platinum | 2000 | Amex | personal | CAD |
-| `amex-cobalt-13005` | Amex Cobalt | 3005 | Amex | personal | CAD |
-| `capitalone-mc-7798` | Capital One MC | 7798 | Capital One | personal | CAD |
-| `capitalone-mc-8048` | Capital One MC #2 | 8048 | Capital One | personal | CAD |
-| `rbc-chequing-95` | RBC Chequing | 1595 | RBC | personal | CAD |
-| `rbc-chequing-95` | RBC Visa Debit | 1886 | RBC | personal | CAD |
-| `rbc-house-6234` | RBC House | 6234 | RBC | personal | CAD |
-| `atb-ctribe-np-7779` | C-Tribe NP Chequing | 7779 | ATB | ctribe-nonprofit | CAD |
-| `mercury-nimbus-2442` | Nimbus Checking | 2442 | Mercury | nimbus-creative | USD |
-| `sahr-auto-cash` | Sahr Cash | CASH | Cash | sahr-auto | CAD |
+| Account ID            | Name                | Last 4 | Bank        | Entity           | Currency |
+| --------------------- | ------------------- | ------ | ----------- | ---------------- | -------- |
+| `amex-platinum-72000` | Amex Platinum       | 2000   | Amex        | personal         | CAD      |
+| `amex-cobalt-13005`   | Amex Cobalt         | 3005   | Amex        | personal         | CAD      |
+| `capitalone-mc-7798`  | Capital One MC      | 7798   | Capital One | personal         | CAD      |
+| `capitalone-mc-8048`  | Capital One MC #2   | 8048   | Capital One | personal         | CAD      |
+| `rbc-chequing-95`     | RBC Chequing        | 1595   | RBC         | personal         | CAD      |
+| `rbc-chequing-95`     | RBC Visa Debit      | 1886   | RBC         | personal         | CAD      |
+| `rbc-house-6234`      | RBC House           | 6234   | RBC         | personal         | CAD      |
+| `atb-ctribe-np-7779`  | C-Tribe NP Chequing | 7779   | ATB         | ctribe-nonprofit | CAD      |
+| `mercury-nimbus-2442` | Nimbus Checking     | 2442   | Mercury     | nimbus-creative  | USD      |
+| `sahr-auto-cash`      | Sahr Cash           | CASH   | Cash        | sahr-auto        | CAD      |
 
 **Account Detection Tips**:
+
 - Look for last 4 digits on receipt (e.g., "Card ending in 2000" → Amex Platinum)
 - Look for card type (Amex, Mastercard, Visa)
 - **Visa ending in 1886** = RBC Chequing (Visa Debit)
@@ -100,18 +122,18 @@ Specify the category:
 
 ## Category Matching
 
-| Keywords | Category |
-|----------|----------|
-| software, subscription, api, saas, app, cloud, anthropic, openai, vercel | `software` |
-| supplies, materials, equipment, tools, canadian tire | `supplies` |
-| food, restaurant, coffee, lunch, dinner, uber eats, doordash | `meals` |
-| uber, lyft, flight, hotel, airbnb, travel, air canada | `travel` |
-| ads, advertising, meta, google ads, facebook, marketing | `advertising` |
-| phone, internet, utilities, hydro, electric, telus, shaw | `utilities` |
-| office, rent, coworking, regus | `rent` |
-| insurance, liability | `insurance` |
-| gas, fuel, parking, shell, petro | `fuel` |
-| amazon, online, ecommerce | `general` |
+| Keywords                                                                 | Category      |
+| ------------------------------------------------------------------------ | ------------- |
+| software, subscription, api, saas, app, cloud, anthropic, openai, vercel | `software`    |
+| supplies, materials, equipment, tools, canadian tire                     | `supplies`    |
+| food, restaurant, coffee, lunch, dinner, uber eats, doordash             | `meals`       |
+| uber, lyft, flight, hotel, airbnb, travel, air canada                    | `travel`      |
+| ads, advertising, meta, google ads, facebook, marketing                  | `advertising` |
+| phone, internet, utilities, hydro, electric, telus, shaw                 | `utilities`   |
+| office, rent, coworking, regus                                           | `rent`        |
+| insurance, liability                                                     | `insurance`   |
+| gas, fuel, parking, shell, petro                                         | `fuel`        |
+| amazon, online, ecommerce                                                | `general`     |
 
 ## Workflow
 
@@ -138,6 +160,7 @@ Does this look correct? Reply **confirm** to save, or tell me what to change.
 ```
 
 **IMPORTANT**: Always try to identify the payment card from the receipt. Look for:
+
 - "Card ending in XXXX"
 - Card network logos (Amex, Visa, Mastercard)
 - Bank name references
@@ -145,6 +168,7 @@ Does this look correct? Reply **confirm** to save, or tell me what to change.
 ### Step 2: User Confirmation
 
 Wait for user response:
+
 - "confirm" / "yes" / "save it" → Save transaction
 - "change entity to sahr auto" → Update and re-confirm
 - "amount is 89.99" → Correct and re-confirm
@@ -174,15 +198,33 @@ When analyzing receipt images, extract:
 1. **Merchant Name**: The business/store name (prioritize header/logo)
 2. **Date**: Transaction date (look for date stamps, "Date:", receipt date)
 3. **Total Amount**: Final amount paid (look for "Total", "Amount Due", "Grand Total")
-4. **Currency**: USD, CAD, etc. (default to CAD if ambiguous)
+4. **Currency**: USD or CAD - see detection rules below
 5. **Payment Method**: Card type if visible (for reference only)
 6. **Line Items**: Individual items if clearly visible
+
+### Currency Detection
+
+**IMPORTANT**: Always determine the currency. If unclear, ASK the user.
+
+| Indicator                                                       | Currency    |
+| --------------------------------------------------------------- | ----------- |
+| "CAD", "CA$", "CDN$", "C$"                                      | CAD         |
+| "USD", "US$", "U.S."                                            | USD         |
+| Canadian merchants (Tim Hortons, Canadian Tire, Shoppers, etc.) | CAD         |
+| Mercury account charges                                         | USD         |
+| US-based SaaS (Anthropic, OpenAI, Vercel, Stripe, etc.)         | Usually USD |
+
+**If the receipt just shows "$" with no country indicator:**
+
+- ASK: "Is this $XX.XX in CAD or USD?"
+- Don't assume - incorrect currency affects financial reporting
 
 ### Handling Ambiguity
 
 - If date is unclear, use today's date and note "date estimated"
 - If amount is unclear, ask user to confirm
 - If merchant is unclear, describe what's visible
+- **If currency is unclear, ASK before saving**
 - Always prioritize the TOTAL over subtotals
 
 ## Example Conversations
@@ -322,6 +364,37 @@ CT2: ✅ Saved! -$20.00 USD
 • Amex Platinum → CT Net (software)
 ```
 
+### Currency Unclear
+
+```
+User: [image] log this expense
+
+CT2: 📸 Extracted:
+
+• **Merchant:** Amazon
+• **Date:** Feb 5, 2026
+• **Amount:** $47.89
+• **Card:** Visa ending in 1886
+
+The receipt shows "$47.89" but doesn't specify the currency. Is this CAD or USD?
+
+User: cad
+
+CT2: Got it!
+
+• **Amount:** $47.89 CAD
+• **Account:** RBC Chequing (1886)
+• **Category:** general
+• **Entity:** ?
+
+Which business is this for?
+
+User: personal
+
+CT2: ✅ Saved! -$47.89 CAD
+• RBC Chequing → Personal (general)
+```
+
 ## Error Handling
 
 ### Can't Read Image
@@ -349,12 +422,14 @@ CT2: 🧾 I don't see an image attached. Send a photo of your receipt and I'll c
 ## Integration
 
 This skill saves transactions to:
+
 - **Firestore**: `saffa-finances` project, `transactions` collection
 - **Dashboard**: https://saffa-finances.web.app
 
 ### Transaction Format
 
 **CRITICAL: Expenses must have NEGATIVE amounts.** The dashboard determines income vs expense by the sign:
+
 - **Negative amount** = Expense (e.g., -99.00)
 - **Positive amount** = Income (e.g., +150.00)
 
@@ -364,7 +439,7 @@ Receipts and purchases are almost always **expenses**, so use negative amounts:
 {
   "date": "2026-02-04",
   "description": "Apollo.io - Monthly subscription",
-  "amount": -99.00,
+  "amount": -99.0,
   "category": "software",
   "entities": ["ct-networks"],
   "account": "amex-platinum-72000",
@@ -375,6 +450,7 @@ Receipts and purchases are almost always **expenses**, so use negative amounts:
 ```
 
 **Required fields**:
+
 - `date` - Transaction date
 - `description` - Merchant + brief description
 - `amount` - NEGATIVE for expenses
@@ -385,8 +461,8 @@ Receipts and purchases are almost always **expenses**, so use negative amounts:
 
 - **IMPORTANT**: All receipts/purchases/invoices are EXPENSES - use NEGATIVE amounts
 - The only time you'd use a positive amount is for income (e.g., refunds, deposits)
+- **IMPORTANT**: If currency is unclear (just "$" with no CAD/USD indicator), ASK before saving
 - Receipts are analyzed using Claude's vision capabilities
-- All amounts default to CAD unless clearly marked otherwise
 - USD amounts are noted with `"currency": "USD"` and stored as-is (no conversion)
 - Original images are not stored (privacy)
 - Transaction source is marked as "receipt-capture" for tracking
