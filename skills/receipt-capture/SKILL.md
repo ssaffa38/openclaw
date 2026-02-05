@@ -219,6 +219,11 @@ When analyzing receipt images, extract:
 - ASK: "Is this $XX.XX in CAD or USD?"
 - Don't assume - incorrect currency affects financial reporting
 
+**Bank Statement Rule:**
+
+- Mercury statements = USD (Nimbus account)
+- All other bank statements (RBC, ATB, Capital One, Amex) = CAD
+
 ### Handling Ambiguity
 
 - If date is unclear, use today's date and note "date estimated"
