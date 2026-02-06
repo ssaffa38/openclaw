@@ -1,15 +1,20 @@
 {
-  "name": "@clawdbot/sahr-finance-sync",
+  "name": "@openclaw/sahr-finance-sync",
   "version": "1.0.0",
-  "type": "module",
   "description": "Sync Sahr Auto Detailing CRM bookings to Saffa Finances dashboard",
-  "author": "Saffa & Company",
   "license": "MIT",
+  "author": "Saffa & Company",
+  "type": "module",
   "dependencies": {
     "@sinclair/typebox": "0.34.47",
     "firebase": "^10.7.0"
   },
-  "clawdbot": {
-    "extensions": ["./index.ts"]
+  "devDependencies": {
+    "openclaw": "workspace:*"
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
   }
 }

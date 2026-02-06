@@ -6,7 +6,7 @@
  * generates financial reports.
  */
 
-import type { ClawdbotPluginApi } from "clawdbot/plugin-sdk";
+import type { OpenClawPluginApi } from "openclaw/plugin-sdk";
 import { Type } from "@sinclair/typebox";
 import { initializeApp, getApps, FirebaseApp } from "firebase/app";
 import {
@@ -148,30 +148,32 @@ const sahrFinanceSyncPlugin = {
     },
   },
 
-  register(api: ClawdbotPluginApi) {
-    const config = api.pluginConfig as {
-      enabled: boolean;
-      entityId: string;
-      defaultAccount: string;
-      autoSync: boolean;
+  register(api: OpenClawPluginApi) {
+    const config = (api.pluginConfig || {}) as {
+      enabled?: boolean;
+      firebaseApiKey?: string;
+      firebaseProjectId?: string;
+      entityId?: string;
+      defaultAccount?: string;
+      autoSync?: boolean;
     };
 
-    if (!config.enabled) {
+    if (config.enabled === false) {
       api.logger.info("Sahr Finance Sync: Plugin disabled via config");
       return;
     }
+
+    // Apply defaults
+    const entityId = config.entityId ?? "sahr-auto";
+    const defaultAccount = config.defaultAccount ?? "sahr-etransfer";
 
     // Initialize Firebase
     let app: FirebaseApp;
     let db: Firestore;
 
     const firebaseConfig = {
-      apiKey: process.env.FIREBASE_API_KEY,
-      authDomain: process.env.FIREBASE_AUTH_DOMAIN,
-      projectId: process.env.FIREBASE_PROJECT_ID || "saffa-finances",
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-      messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-      appId: process.env.FIREBASE_APP_ID,
+      apiKey: config.firebaseApiKey || process.env.FIREBASE_API_KEY,
+      projectId: config.firebaseProjectId || process.env.FIREBASE_PROJECT_ID || "saffa-finances",
     };
 
     if (getApps().length === 0) {
@@ -180,6 +182,99 @@ const sahrFinanceSyncPlugin = {
       app = getApps()[0];
     }
     db = getFirestore(app);
+
+    // -------------------------------------------------------------------------
+    // TOOL: Create Generic Transaction (for receipt capture, manual entry, etc.)
+    // -------------------------------------------------------------------------
+    api.registerTool({
+      name: "saffa_finance_create_transaction",
+      description:
+        "Create a transaction in Saffa Finances. Use this for receipt capture, manual expense entry, or any transaction that needs to be recorded.",
+      parameters: Type.Object({
+        date: Type.String({ description: "Transaction date (YYYY-MM-DD)" }),
+        description: Type.String({ description: "Transaction description (merchant, purpose)" }),
+        amount: Type.Number({ description: "Amount (positive for income, negative for expense)" }),
+        category: Type.String({
+          description:
+            "Category (software, supplies, meals, travel, advertising, utilities, general, subscriptions, tech-infra, dining, transportation, etc.)",
+        }),
+        entities: Type.Array(Type.String(), {
+          description:
+            "Business entity IDs (e.g. ['ct-networks', 'nimbus-creative']). Can be multiple for shared expenses.",
+        }),
+        account: Type.Optional(
+          Type.String({
+            description:
+              "Account ID (e.g. amex-platinum-72000, mercury-nimbus-2442). Required for proper tracking.",
+          }),
+        ),
+        currency: Type.Optional(
+          Type.String({ description: "Currency code (CAD, USD). Defaults to CAD" }),
+        ),
+        source: Type.Optional(
+          Type.String({ description: "Source of transaction (receipt-capture, manual, import)" }),
+        ),
+        metadata: Type.Optional(
+          Type.Object({
+            merchant: Type.Optional(Type.String()),
+            notes: Type.Optional(Type.String()),
+          }),
+        ),
+      }),
+      async execute(_toolCallId, params) {
+        const entitiesArr = params.entities || [];
+        const primaryEntity = entitiesArr[0] || "personal";
+
+        const transaction: Transaction = {
+          id: generateTransactionId("tx"),
+          date: params.date,
+          description: params.description,
+          amount: params.amount,
+          currency: params.currency || "CAD",
+          account: params.account,
+          category: params.category,
+          categorySource: "manual",
+          entity: primaryEntity,
+          source: params.source || "receipt-capture",
+          importedAt: new Date().toISOString(),
+          metadata: {
+            ...(params.metadata || {}),
+            syncedAt: new Date().toISOString(),
+          },
+        };
+
+        const transactionsRef = collection(db, "transactions");
+        const docRef = await addDoc(transactionsRef, {
+          ...transaction,
+          entities: entitiesArr,
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now(),
+        });
+
+        const amountStr =
+          params.amount < 0
+            ? `-${formatCurrency(Math.abs(params.amount))}`
+            : formatCurrency(params.amount);
+
+        const output = `**Transaction Created** ✅
+
+- **Description:** ${params.description}
+- **Amount:** ${amountStr} ${params.currency || "CAD"}
+- **Date:** ${params.date}
+- **Category:** ${params.category}
+- **Business:** ${entitiesArr.join(", ")}
+${params.account ? `- **Account:** ${params.account}` : ""}
+
+_Transaction ID: ${docRef.id}_
+
+🔗 View: https://saffa-finances.web.app`;
+
+        return {
+          content: [{ type: "text" as const, text: output }],
+          details: { transaction, firebaseId: docRef.id },
+        };
+      },
+    });
 
     // -------------------------------------------------------------------------
     // TOOL: Sync Booking to Finance
@@ -191,10 +286,10 @@ const sahrFinanceSyncPlugin = {
       parameters: Type.Object({
         bookingId: Type.String({ description: "Booking ID to sync" }),
         overrideAmount: Type.Optional(
-          Type.Number({ description: "Override the booking amount if different" })
+          Type.Number({ description: "Override the booking amount if different" }),
         ),
         paymentMethod: Type.Optional(
-          Type.String({ description: "Payment method used (etransfer, stripe, cash, debit)" })
+          Type.String({ description: "Payment method used (etransfer, stripe, cash, debit)" }),
         ),
         notes: Type.Optional(Type.String({ description: "Additional notes for the transaction" })),
       }),
@@ -230,7 +325,7 @@ const sahrFinanceSyncPlugin = {
 
         // Determine account based on payment method
         const paymentMethod = params.paymentMethod || booking.paymentMethod || "etransfer";
-        const accountId = PAYMENT_ACCOUNTS[paymentMethod.toLowerCase()] || config.defaultAccount;
+        const accountId = PAYMENT_ACCOUNTS[paymentMethod.toLowerCase()] || defaultAccount;
 
         // Create the transaction
         const amount = params.overrideAmount || booking.price;
@@ -243,7 +338,7 @@ const sahrFinanceSyncPlugin = {
           accountId: accountId,
           category: SERVICE_CATEGORIES[booking.serviceType] || "auto-detailing",
           categorySource: "crm-sync",
-          entity: config.entityId,
+          entity: entityId,
           source: "sahr-crm",
           importedAt: new Date().toISOString(),
           metadata: {
@@ -283,7 +378,7 @@ const sahrFinanceSyncPlugin = {
             accountId: accountId,
             category: "tips",
             categorySource: "crm-sync",
-            entity: config.entityId,
+            entity: entityId,
             source: "sahr-crm",
             importedAt: new Date().toISOString(),
             metadata: {
@@ -308,7 +403,7 @@ const sahrFinanceSyncPlugin = {
 - Customer: ${booking.customerName}
 - Service: ${booking.serviceType.replace(/_/g, " ")}
 - Account: ${accountId}
-- Entity: ${config.entityId}`;
+- Entity: ${entityId}`;
 
         if (tipTransaction) {
           output += `
@@ -350,8 +445,7 @@ _Transaction ID: ${txDocRef.id}_`;
       async execute(_toolCallId, params) {
         const date = params.date || new Date().toISOString().split("T")[0];
         const accountId =
-          PAYMENT_ACCOUNTS[params.paymentMethod?.toLowerCase() || "etransfer"] ||
-          config.defaultAccount;
+          PAYMENT_ACCOUNTS[params.paymentMethod?.toLowerCase() || "etransfer"] || defaultAccount;
 
         const transaction: Transaction = {
           id: generateTransactionId("sahr_tip"),
@@ -362,7 +456,7 @@ _Transaction ID: ${txDocRef.id}_`;
           accountId: accountId,
           category: "tips",
           categorySource: "crm-sync",
-          entity: config.entityId,
+          entity: entityId,
           source: "sahr-crm",
           importedAt: new Date().toISOString(),
           metadata: {
@@ -426,10 +520,10 @@ _Transaction ID: ${docRef.id}_`;
             : params.description,
           amount: -Math.abs(params.amount), // Negative for expenses
           currency: "CAD",
-          accountId: config.defaultAccount,
+          accountId: defaultAccount,
           category: params.category,
           categorySource: "crm-sync",
-          entity: config.entityId,
+          entity: entityId,
           source: "sahr-crm",
           importedAt: new Date().toISOString(),
           metadata: {
@@ -462,17 +556,12 @@ _Transaction ID: ${docRef.id}_`;
     // -------------------------------------------------------------------------
     api.registerTool({
       name: "sahr_finance_revenue_report",
-      description:
-        "Generate a revenue report for Sahr Auto Detailing over a specified period.",
+      description: "Generate a revenue report for Sahr Auto Detailing over a specified period.",
       parameters: Type.Object({
         startDate: Type.String({ description: "Start date (YYYY-MM-DD)" }),
         endDate: Type.String({ description: "End date (YYYY-MM-DD)" }),
         groupBy: Type.Optional(
-          Type.Union([
-            Type.Literal("day"),
-            Type.Literal("week"),
-            Type.Literal("month"),
-          ])
+          Type.Union([Type.Literal("day"), Type.Literal("week"), Type.Literal("month")]),
         ),
         includeCustomerBreakdown: Type.Optional(Type.Boolean()),
       }),
@@ -481,10 +570,10 @@ _Transaction ID: ${docRef.id}_`;
         const transactionsRef = collection(db, "transactions");
         const txQuery = query(
           transactionsRef,
-          where("entity", "==", config.entityId),
+          where("entity", "==", entityId),
           where("date", ">=", params.startDate),
           where("date", "<=", params.endDate),
-          orderBy("date")
+          orderBy("date"),
         );
 
         const snapshot = await getDocs(txQuery);
@@ -499,14 +588,12 @@ _Transaction ID: ${docRef.id}_`;
         const expenseTransactions = transactions.filter((t) => t.amount < 0);
         const tipTransactions = transactions.filter((t) => t.category === "tips");
         const serviceTransactions = incomeTransactions.filter(
-          (t) => t.category === "auto-detailing"
+          (t) => t.category === "auto-detailing",
         );
 
         const totalRevenue = serviceTransactions.reduce((sum, t) => sum + t.amount, 0);
         const totalTips = tipTransactions.reduce((sum, t) => sum + t.amount, 0);
-        const totalExpenses = Math.abs(
-          expenseTransactions.reduce((sum, t) => sum + t.amount, 0)
-        );
+        const totalExpenses = Math.abs(expenseTransactions.reduce((sum, t) => sum + t.amount, 0));
         const netIncome = totalRevenue + totalTips - totalExpenses;
 
         // Group by service type
@@ -618,9 +705,9 @@ _Transaction ID: ${docRef.id}_`;
         const transactionsRef = collection(db, "transactions");
         const txQuery = query(
           transactionsRef,
-          where("entity", "==", config.entityId),
+          where("entity", "==", entityId),
           where("metadata.customerName", "==", params.customerName),
-          orderBy("date")
+          orderBy("date"),
         );
 
         const snapshot = await getDocs(txQuery);
@@ -631,9 +718,7 @@ _Transaction ID: ${docRef.id}_`;
         });
 
         // Calculate metrics
-        const serviceTransactions = transactions.filter(
-          (t) => t.category === "auto-detailing"
-        );
+        const serviceTransactions = transactions.filter((t) => t.category === "auto-detailing");
         const tipTransactions = transactions.filter((t) => t.category === "tips");
 
         const totalRevenue = serviceTransactions.reduce((sum, t) => sum + t.amount, 0);
@@ -652,8 +737,8 @@ _Transaction ID: ${docRef.id}_`;
           tenureMonths = Math.max(
             1,
             Math.round(
-              (lastBooking.getTime() - firstBooking.getTime()) / (1000 * 60 * 60 * 24 * 30)
-            )
+              (lastBooking.getTime() - firstBooking.getTime()) / (1000 * 60 * 60 * 24 * 30),
+            ),
           );
         }
 
@@ -718,8 +803,7 @@ _Transaction ID: ${docRef.id}_`;
     // -------------------------------------------------------------------------
     api.registerTool({
       name: "sahr_finance_list_unsynced",
-      description:
-        "List completed bookings that haven't been synced to the finance dashboard yet.",
+      description: "List completed bookings that haven't been synced to the finance dashboard yet.",
       parameters: Type.Object({
         limit: Type.Optional(Type.Number({ description: "Max results to return" })),
       }),
@@ -730,7 +814,7 @@ _Transaction ID: ${docRef.id}_`;
           where("status", "==", "completed"),
           where("financeSynced", "in", [false, null]),
           orderBy("appointmentDate", "desc"),
-          limit(params.limit || 20)
+          limit(params.limit || 20),
         );
 
         const snapshot = await getDocs(unsyncedQuery);
@@ -778,6 +862,576 @@ The following completed bookings haven't been synced to finance yet:
     });
 
     // -------------------------------------------------------------------------
+    // TOOL: Job Profitability Analysis
+    // -------------------------------------------------------------------------
+    api.registerTool({
+      name: "sahr_finance_job_profitability",
+      description:
+        "Analyze profitability of a specific booking. Shows revenue, COGS, profit margin, and compares to averages.",
+      parameters: Type.Object({
+        bookingId: Type.String({ description: "Booking ID to analyze" }),
+        includeComparison: Type.Optional(
+          Type.Boolean({ description: "Include comparison to average margins" }),
+        ),
+      }),
+      async execute(_toolCallId, params) {
+        // Get the booking
+        const bookingRef = doc(db, "sahr_bookings", params.bookingId);
+        const bookingSnap = await getDoc(bookingRef);
+
+        if (!bookingSnap.exists()) {
+          return {
+            content: [{ type: "text" as const, text: `Booking ${params.bookingId} not found` }],
+          };
+        }
+
+        const booking = bookingSnap.data();
+        const price = booking.price || 0;
+        const costs = booking.costs || {};
+        const hasCosts = booking.costs && Object.keys(booking.costs).length > 0;
+
+        if (!hasCosts) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text:
+                  `**Booking ${params.bookingId}**\n\n` +
+                  `- Customer: ${booking.customerName}\n` +
+                  `- Date: ${booking.date || booking.appointmentAt?.toDate?.()?.toLocaleDateString()}\n` +
+                  `- Revenue: ${formatCurrency(price)}\n\n` +
+                  `⚠️ **No COGS recorded for this booking.**\n` +
+                  `Use \`sahr_crm_add_job_costs\` to add cost data for profitability analysis.`,
+              },
+            ],
+          };
+        }
+
+        const totalCogs =
+          (costs.gas || 0) +
+          (costs.carWash || 0) +
+          (costs.supplies || 0) +
+          (costs.labor || 0) +
+          (costs.other || 0);
+        const netProfit = price - totalCogs;
+        const grossMargin = price > 0 ? (netProfit / price) * 100 : 0;
+        const season = booking.season || "unknown";
+
+        let output = `**Job Profitability Analysis**
+📊 Booking: ${params.bookingId}
+
+---
+
+**Revenue & Costs:**
+| Item | Amount |
+|------|--------|
+| Revenue | ${formatCurrency(price)} |
+| Gas | ${formatCurrency(costs.gas || 0)} |
+| Car Wash | ${formatCurrency(costs.carWash || 0)} |
+| Supplies | ${formatCurrency(costs.supplies || 0)} |
+| Labor | ${formatCurrency(costs.labor || 0)} |
+| Other | ${formatCurrency(costs.other || 0)} |
+| **Total COGS** | **${formatCurrency(totalCogs)}** |
+| **Net Profit** | **${formatCurrency(netProfit)}** |
+| **Gross Margin** | **${grossMargin.toFixed(1)}%** |
+
+**Context:**
+- Customer: ${booking.customerName}
+- Date: ${booking.date || "N/A"}
+- Service: ${booking.serviceType?.replace(/_/g, " ") || "Detail"}
+- Season: ${season}
+${booking.costsNotes ? `- Notes: ${booking.costsNotes}` : ""}`;
+
+        // Add comparison if requested
+        if (params.includeComparison) {
+          // Query recent bookings with COGS data for comparison
+          const bookingsRef = collection(db, "sahr_bookings");
+          const recentQuery = query(
+            bookingsRef,
+            where("status", "==", "completed"),
+            orderBy("date", "desc"),
+            limit(50),
+          );
+
+          const snapshot = await getDocs(recentQuery);
+          const bookingsWithCosts: Array<{ margin: number; season: string }> = [];
+
+          snapshot.forEach((docSnap) => {
+            const b = docSnap.data();
+            if (b.costs && b.price) {
+              const bCosts =
+                (b.costs.gas || 0) +
+                (b.costs.carWash || 0) +
+                (b.costs.supplies || 0) +
+                (b.costs.labor || 0) +
+                (b.costs.other || 0);
+              const bProfit = b.price - bCosts;
+              const bMargin = (bProfit / b.price) * 100;
+              bookingsWithCosts.push({ margin: bMargin, season: b.season || "unknown" });
+            }
+          });
+
+          if (bookingsWithCosts.length > 1) {
+            const avgMargin =
+              bookingsWithCosts.reduce((sum, b) => sum + b.margin, 0) / bookingsWithCosts.length;
+            const sameSeasonBookings = bookingsWithCosts.filter((b) => b.season === season);
+            const seasonAvgMargin =
+              sameSeasonBookings.length > 0
+                ? sameSeasonBookings.reduce((sum, b) => sum + b.margin, 0) /
+                  sameSeasonBookings.length
+                : null;
+
+            const marginDiff = grossMargin - avgMargin;
+            const performanceEmoji = marginDiff > 5 ? "📈" : marginDiff < -5 ? "📉" : "➡️";
+
+            output += `
+
+---
+
+**Comparison to Averages:**
+- Overall Average Margin: ${avgMargin.toFixed(1)}%
+- This Job: ${grossMargin.toFixed(1)}% ${performanceEmoji} (${marginDiff > 0 ? "+" : ""}${marginDiff.toFixed(1)}%)`;
+
+            if (seasonAvgMargin !== null) {
+              const seasonDiff = grossMargin - seasonAvgMargin;
+              output += `
+- ${season.charAt(0).toUpperCase() + season.slice(1)} Average: ${seasonAvgMargin.toFixed(1)}% (${seasonDiff > 0 ? "+" : ""}${seasonDiff.toFixed(1)}%)`;
+            }
+
+            output += `
+- Jobs with COGS data: ${bookingsWithCosts.length}`;
+          }
+        }
+
+        return {
+          content: [{ type: "text" as const, text: output }],
+          details: {
+            bookingId: params.bookingId,
+            customerName: booking.customerName,
+            date: booking.date,
+            price,
+            costs,
+            totalCogs,
+            netProfit,
+            grossMargin,
+            season,
+          },
+        };
+      },
+    });
+
+    // -------------------------------------------------------------------------
+    // TOOL: Margin Analysis
+    // -------------------------------------------------------------------------
+    api.registerTool({
+      name: "sahr_finance_margin_analysis",
+      description:
+        "Analyze profit margins across bookings by period, customer, service type, or season.",
+      parameters: Type.Object({
+        period: Type.Optional(
+          Type.Union(
+            [
+              Type.Literal("month"),
+              Type.Literal("quarter"),
+              Type.Literal("year"),
+              Type.Literal("all"),
+            ],
+            { description: "Time period to analyze" },
+          ),
+        ),
+        groupBy: Type.Optional(
+          Type.Union(
+            [
+              Type.Literal("customer"),
+              Type.Literal("service_type"),
+              Type.Literal("season"),
+              Type.Literal("month"),
+            ],
+            { description: "How to group the analysis" },
+          ),
+        ),
+      }),
+      async execute(_toolCallId, params) {
+        const period = params.period || "all";
+        const groupBy = params.groupBy || "season";
+
+        // Calculate date range
+        const now = new Date();
+        let startDate: Date;
+        switch (period) {
+          case "month":
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            break;
+          case "quarter":
+            const quarterStart = Math.floor(now.getMonth() / 3) * 3;
+            startDate = new Date(now.getFullYear(), quarterStart, 1);
+            break;
+          case "year":
+            startDate = new Date(now.getFullYear(), 0, 1);
+            break;
+          default:
+            startDate = new Date(2020, 0, 1); // All time
+        }
+
+        // Query bookings with COGS
+        const bookingsRef = collection(db, "sahr_bookings");
+        const bookingsQuery = query(
+          bookingsRef,
+          where("status", "==", "completed"),
+          orderBy("date", "desc"),
+          limit(200),
+        );
+
+        const snapshot = await getDocs(bookingsQuery);
+        const bookings: Array<{
+          id: string;
+          customerName: string;
+          date: string;
+          serviceType: string;
+          season: string;
+          price: number;
+          totalCogs: number;
+          netProfit: number;
+          grossMargin: number;
+        }> = [];
+
+        snapshot.forEach((docSnap) => {
+          const b = docSnap.data();
+          const bookingDate = new Date(b.date || b.appointmentAt?.toDate?.() || now);
+
+          if (bookingDate >= startDate && b.costs && b.price) {
+            const totalCogs =
+              (b.costs.gas || 0) +
+              (b.costs.carWash || 0) +
+              (b.costs.supplies || 0) +
+              (b.costs.labor || 0) +
+              (b.costs.other || 0);
+            const netProfit = b.price - totalCogs;
+            const grossMargin = (netProfit / b.price) * 100;
+
+            bookings.push({
+              id: docSnap.id,
+              customerName: b.customerName || "Unknown",
+              date: b.date || bookingDate.toISOString().split("T")[0],
+              serviceType: b.serviceType || "full_detail",
+              season: b.season || "unknown",
+              price: b.price,
+              totalCogs,
+              netProfit,
+              grossMargin,
+            });
+          }
+        });
+
+        if (bookings.length === 0) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: `**Margin Analysis**\n\n⚠️ No bookings with COGS data found for the selected period.\n\nUse \`sahr_crm_add_job_costs\` to record costs for completed bookings.`,
+              },
+            ],
+          };
+        }
+
+        // Calculate overall stats
+        const totalRevenue = bookings.reduce((sum, b) => sum + b.price, 0);
+        const totalCogs = bookings.reduce((sum, b) => sum + b.totalCogs, 0);
+        const totalProfit = bookings.reduce((sum, b) => sum + b.netProfit, 0);
+        const avgMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
+
+        // Group analysis
+        const groups: Record<
+          string,
+          { count: number; revenue: number; cogs: number; profit: number; margin: number }
+        > = {};
+
+        bookings.forEach((b) => {
+          let key: string;
+          switch (groupBy) {
+            case "customer":
+              key = b.customerName;
+              break;
+            case "service_type":
+              key = b.serviceType.replace(/_/g, " ");
+              break;
+            case "month":
+              key = b.date.substring(0, 7); // YYYY-MM
+              break;
+            case "season":
+            default:
+              key = b.season;
+          }
+
+          if (!groups[key]) {
+            groups[key] = { count: 0, revenue: 0, cogs: 0, profit: 0, margin: 0 };
+          }
+          groups[key].count++;
+          groups[key].revenue += b.price;
+          groups[key].cogs += b.totalCogs;
+          groups[key].profit += b.netProfit;
+        });
+
+        // Calculate margins for each group
+        Object.values(groups).forEach((g) => {
+          g.margin = g.revenue > 0 ? (g.profit / g.revenue) * 100 : 0;
+        });
+
+        // Sort by margin descending
+        const sortedGroups = Object.entries(groups).sort((a, b) => b[1].margin - a[1].margin);
+
+        let output = `**Margin Analysis**
+📊 Period: ${period === "all" ? "All Time" : period.charAt(0).toUpperCase() + period.slice(1)}
+📈 Grouped by: ${groupBy.replace(/_/g, " ")}
+
+---
+
+**Overall Summary:**
+| Metric | Value |
+|--------|-------|
+| Total Revenue | ${formatCurrency(totalRevenue)} |
+| Total COGS | ${formatCurrency(totalCogs)} |
+| Total Profit | ${formatCurrency(totalProfit)} |
+| **Average Margin** | **${avgMargin.toFixed(1)}%** |
+| Jobs Analyzed | ${bookings.length} |
+
+---
+
+**By ${groupBy.replace(/_/g, " ").charAt(0).toUpperCase() + groupBy.replace(/_/g, " ").slice(1)}:**
+`;
+
+        sortedGroups.forEach(([key, data]) => {
+          const marginIcon = data.margin >= 60 ? "🟢" : data.margin >= 40 ? "🟡" : "🔴";
+          output += `\n${marginIcon} **${key}** (${data.count} jobs)`;
+          output += `\n   Revenue: ${formatCurrency(data.revenue)} | COGS: ${formatCurrency(data.cogs)} | Profit: ${formatCurrency(data.profit)}`;
+          output += `\n   **Margin: ${data.margin.toFixed(1)}%**\n`;
+        });
+
+        // Seasonal insight
+        if (groupBy === "season" && groups["winter"] && groups["summer"]) {
+          const winterMargin = groups["winter"].margin;
+          const summerMargin = groups["summer"].margin;
+          output += `\n---\n\n**💡 Seasonal Insight:**\n`;
+          output += `Summer margin (${summerMargin.toFixed(1)}%) is ${(summerMargin - winterMargin).toFixed(1)}% higher than winter (${winterMargin.toFixed(1)}%).`;
+          output += `\nThis is expected due to car wash facility costs in winter (~$43/job).`;
+        }
+
+        return {
+          content: [{ type: "text" as const, text: output }],
+          details: {
+            period,
+            groupBy,
+            totalRevenue,
+            totalCogs,
+            totalProfit,
+            avgMargin,
+            bookingCount: bookings.length,
+            groups,
+          },
+        };
+      },
+    });
+
+    // -------------------------------------------------------------------------
+    // TOOL: Seasonal Revenue Forecast
+    // -------------------------------------------------------------------------
+    api.registerTool({
+      name: "sahr_finance_seasonal_forecast",
+      description:
+        "Project revenue, costs, and profit for upcoming months based on customer schedules and seasonal patterns.",
+      parameters: Type.Object({
+        months: Type.Number({ description: "Number of months to forecast (1-6)" }),
+        includeNewCustomers: Type.Optional(
+          Type.Boolean({ description: "Include estimates for new customer growth" }),
+        ),
+      }),
+      async execute(_toolCallId, params) {
+        const monthsToForecast = Math.min(Math.max(params.months, 1), 6);
+
+        // Get active customers with schedules
+        const customersRef = collection(db, "sahr_customers");
+        const customersQuery = query(customersRef, where("status", "==", "active"));
+        const customersSnap = await getDocs(customersQuery);
+
+        const customers: Array<{
+          id: string;
+          name: string;
+          standardPrice: number;
+          schedule: { summer?: { frequencyWeeks: number }; winter?: { frequencyWeeks: number } };
+        }> = [];
+
+        customersSnap.forEach((docSnap) => {
+          const data = docSnap.data();
+          customers.push({
+            id: docSnap.id,
+            name: data.name,
+            standardPrice: data.standardPrice || 130,
+            schedule: data.schedule || {
+              summer: { frequencyWeeks: 4 },
+              winter: { frequencyWeeks: 4 },
+            },
+          });
+        });
+
+        // Get historical averages for COGS
+        const bookingsRef = collection(db, "sahr_bookings");
+        const cogsQuery = query(
+          bookingsRef,
+          where("status", "==", "completed"),
+          orderBy("date", "desc"),
+          limit(50),
+        );
+        const cogsSnap = await getDocs(cogsQuery);
+
+        let winterCogs = 61; // Default
+        let summerCogs = 18; // Default
+        let winterCount = 0;
+        let summerCount = 0;
+
+        cogsSnap.forEach((docSnap) => {
+          const data = docSnap.data();
+          if (data.costs && data.season) {
+            const totalCogs =
+              (data.costs.gas || 0) + (data.costs.carWash || 0) + (data.costs.supplies || 0);
+            if (data.season === "winter") {
+              winterCogs = (winterCogs * winterCount + totalCogs) / (winterCount + 1);
+              winterCount++;
+            } else if (data.season === "summer") {
+              summerCogs = (summerCogs * summerCount + totalCogs) / (summerCount + 1);
+              summerCount++;
+            }
+          }
+        });
+
+        // Generate forecast for each month
+        const forecast: Array<{
+          month: string;
+          season: string;
+          expectedBookings: number;
+          projectedRevenue: number;
+          projectedCogs: number;
+          projectedProfit: number;
+          margin: number;
+        }> = [];
+
+        const now = new Date();
+        for (let i = 0; i < monthsToForecast; i++) {
+          const forecastDate = new Date(now.getFullYear(), now.getMonth() + i + 1, 1);
+          const monthName = forecastDate.toLocaleString("default", {
+            month: "long",
+            year: "numeric",
+          });
+          const monthNum = forecastDate.getMonth() + 1;
+
+          // Determine season
+          let season: "winter" | "summer" | "shoulder";
+          if (monthNum >= 11 || monthNum <= 3) season = "winter";
+          else if (monthNum >= 5 && monthNum <= 9) season = "summer";
+          else season = "shoulder";
+
+          // Calculate expected bookings based on customer schedules
+          let expectedBookings = 0;
+          let projectedRevenue = 0;
+
+          customers.forEach((customer) => {
+            const scheduleKey = season === "winter" ? "winter" : "summer";
+            const frequencyWeeks = customer.schedule?.[scheduleKey]?.frequencyWeeks || 4;
+            const bookingsPerMonth = 4 / frequencyWeeks; // Approximate weeks per month
+            expectedBookings += bookingsPerMonth;
+            projectedRevenue += bookingsPerMonth * customer.standardPrice;
+          });
+
+          // Add new customer estimate if requested
+          if (params.includeNewCustomers) {
+            const newCustomerEstimate = 0.5; // Assume 0.5 new customers per month
+            const avgNewCustomerPrice = 145; // Average between standard and referral
+            expectedBookings += newCustomerEstimate;
+            projectedRevenue += newCustomerEstimate * avgNewCustomerPrice;
+          }
+
+          // Calculate COGS based on season
+          const avgCogs =
+            season === "winter"
+              ? winterCogs
+              : season === "summer"
+                ? summerCogs
+                : (winterCogs + summerCogs) / 2;
+          const projectedCogs = expectedBookings * avgCogs;
+          const projectedProfit = projectedRevenue - projectedCogs;
+          const margin = projectedRevenue > 0 ? (projectedProfit / projectedRevenue) * 100 : 0;
+
+          forecast.push({
+            month: monthName,
+            season,
+            expectedBookings: Math.round(expectedBookings * 10) / 10,
+            projectedRevenue: Math.round(projectedRevenue),
+            projectedCogs: Math.round(projectedCogs),
+            projectedProfit: Math.round(projectedProfit),
+            margin: Math.round(margin * 10) / 10,
+          });
+        }
+
+        // Calculate totals
+        const totals = forecast.reduce(
+          (acc, f) => ({
+            bookings: acc.bookings + f.expectedBookings,
+            revenue: acc.revenue + f.projectedRevenue,
+            cogs: acc.cogs + f.projectedCogs,
+            profit: acc.profit + f.projectedProfit,
+          }),
+          { bookings: 0, revenue: 0, cogs: 0, profit: 0 },
+        );
+
+        let output = `**Seasonal Revenue Forecast**
+📅 Next ${monthsToForecast} month${monthsToForecast > 1 ? "s" : ""}
+👥 Based on ${customers.length} active customer${customers.length !== 1 ? "s" : ""}
+${params.includeNewCustomers ? "📈 Includes new customer growth estimates" : ""}
+
+---
+
+**Monthly Breakdown:**
+`;
+
+        forecast.forEach((f) => {
+          const seasonEmoji = f.season === "winter" ? "❄️" : f.season === "summer" ? "☀️" : "🍂";
+          output += `\n**${f.month}** ${seasonEmoji}\n`;
+          output += `- Expected bookings: ${f.expectedBookings}\n`;
+          output += `- Revenue: ${formatCurrency(f.projectedRevenue)}\n`;
+          output += `- COGS: ${formatCurrency(f.projectedCogs)}\n`;
+          output += `- Profit: ${formatCurrency(f.projectedProfit)} (${f.margin}% margin)\n`;
+        });
+
+        output += `
+---
+
+**${monthsToForecast}-Month Totals:**
+| Metric | Projected |
+|--------|-----------|
+| Bookings | ${Math.round(totals.bookings * 10) / 10} |
+| Revenue | ${formatCurrency(totals.revenue)} |
+| COGS | ${formatCurrency(totals.cogs)} |
+| **Net Profit** | **${formatCurrency(totals.profit)}** |
+| Avg Margin | ${totals.revenue > 0 ? ((totals.profit / totals.revenue) * 100).toFixed(1) : 0}% |
+
+---
+
+**Assumptions:**
+- Winter COGS: ${formatCurrency(winterCogs)}/job (wash bay required)
+- Summer COGS: ${formatCurrency(summerCogs)}/job (mobile service)
+- Customer schedules maintained as currently set`;
+
+        return {
+          content: [{ type: "text" as const, text: output }],
+          details: {
+            forecast,
+            totals,
+            assumptions: { winterCogs, summerCogs, customerCount: customers.length },
+          },
+        };
+      },
+    });
+
+    // -------------------------------------------------------------------------
     // TOOL: Bulk Sync Bookings
     // -------------------------------------------------------------------------
     api.registerTool({
@@ -788,7 +1442,7 @@ The following completed bookings haven't been synced to finance yet:
           description: "Array of booking IDs to sync",
         }),
         defaultPaymentMethod: Type.Optional(
-          Type.String({ description: "Default payment method if not specified" })
+          Type.String({ description: "Default payment method if not specified" }),
         ),
       }),
       async execute(_toolCallId, params) {
@@ -825,8 +1479,7 @@ The following completed bookings haven't been synced to finance yet:
 
             const paymentMethod =
               booking.paymentMethod || params.defaultPaymentMethod || "etransfer";
-            const accountId =
-              PAYMENT_ACCOUNTS[paymentMethod.toLowerCase()] || config.defaultAccount;
+            const accountId = PAYMENT_ACCOUNTS[paymentMethod.toLowerCase()] || defaultAccount;
 
             const transaction: Transaction = {
               id: generateTransactionId("sahr"),
@@ -837,7 +1490,7 @@ The following completed bookings haven't been synced to finance yet:
               accountId: accountId,
               category: SERVICE_CATEGORIES[booking.serviceType] || "auto-detailing",
               categorySource: "crm-sync",
-              entity: config.entityId,
+              entity: entityId,
               source: "sahr-crm",
               importedAt: new Date().toISOString(),
               metadata: {
@@ -869,7 +1522,7 @@ The following completed bookings haven't been synced to finance yet:
                 accountId: accountId,
                 category: "tips",
                 categorySource: "crm-sync",
-                entity: config.entityId,
+                entity: entityId,
                 source: "sahr-crm",
                 importedAt: new Date().toISOString(),
                 metadata: {
@@ -935,7 +1588,7 @@ ${failCount > 0 ? `- Failed: ${failCount}` : ""}
       },
     });
 
-    api.logger.info("Sahr Finance Sync: Plugin registered with 7 tools");
+    api.logger.info("Sahr Finance Sync: Plugin registered with 11 tools");
   },
 };
 
