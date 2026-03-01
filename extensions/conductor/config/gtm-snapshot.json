@@ -1,0 +1,41 @@
+{
+  "companies": {
+    "ct-networks": {
+      "pipelineValue": 47000,
+      "activeDeals": 8,
+      "staleDeals": [
+        {
+          "name": "Energy Disruptors",
+          "stage": "Proposal Sent",
+          "daysStale": 8
+        },
+        {
+          "name": "RM Events",
+          "stage": "Negotiation",
+          "daysStale": 6
+        }
+      ],
+      "pendingReplies": [
+        {
+          "name": "MongoDB",
+          "source": "apollo",
+          "summary": "Needs a personalized follow-up"
+        }
+      ]
+    },
+    "revive-ai": {
+      "pipelineValue": 18000,
+      "activeDeals": 3,
+      "pendingReplies": [
+        {
+          "name": "Enterprise outbound",
+          "source": "apollo",
+          "summary": "2 replies need triage"
+        }
+      ]
+    },
+    "ctvs": {
+      "notes": ["Experiment review cadence is healthy."]
+    }
+  }
+}

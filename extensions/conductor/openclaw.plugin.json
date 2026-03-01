@@ -1,0 +1,47 @@
+{
+  "id": "conductor",
+  "name": "Conductor",
+  "description": "Spawn and manage coding agents across multiple repos.",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "companiesPath": { "type": "string", "default": "~/.openclaw/conductor/companies.json" },
+      "tasksPath": { "type": "string", "default": "~/.openclaw/conductor/active-tasks.json" },
+      "experimentsPath": { "type": "string", "default": "~/.openclaw/conductor/experiments.json" },
+      "gtmSnapshotPath": { "type": "string", "default": "~/.openclaw/conductor/gtm-snapshot.json" },
+      "worktreeRoot": { "type": "string", "default": "~/agent-worktrees" },
+      "maxConcurrentAgents": { "type": "number", "default": 3 },
+      "maxRetries": { "type": "number", "default": 3 },
+      "defaultModel": { "type": "string", "default": "claude-sonnet-4-5-20250929" },
+      "reviewers": {
+        "type": "array",
+        "items": { "type": "string" },
+        "default": ["claude", "gemini"]
+      },
+      "monitorIntervalMs": { "type": "number", "default": 600000 },
+      "notifyChannels": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "warRoom": { "type": "string" },
+          "private": { "type": "string" }
+        }
+      },
+      "ctDelegation": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "channel": { "type": "string" },
+          "mention": { "type": "string" },
+          "accountId": { "type": "string" },
+          "ackTimeoutMs": { "type": "number" },
+          "historyLimit": { "type": "number" }
+        }
+      },
+      "vercelScope": { "type": "string" },
+      "morningReportEnabled": { "type": "boolean", "default": false },
+      "morningReportHourLocal": { "type": "number" }
+    }
+  }
+}

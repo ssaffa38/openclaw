@@ -1,0 +1,23 @@
+{
+  "experiments": [
+    {
+      "id": "exp-revive-pricing-v2",
+      "company": "revive-ai",
+      "hypothesis": "Usage-based pricing increases trial-to-paid by 20%",
+      "status": "running",
+      "startDate": "2026-02-15",
+      "nextReview": "2026-03-15",
+      "metrics": {
+        "trialToPaid": {
+          "baseline": 0.12,
+          "current": 0.15
+        },
+        "avgContractValue": {
+          "baseline": 2400,
+          "current": 2800
+        }
+      },
+      "notes": "Early signal positive. Review at 30-day mark."
+    }
+  ]
+}

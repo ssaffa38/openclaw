@@ -1,0 +1,155 @@
+{
+  "companies": {
+    "saffa-co": {
+      "name": "Saffa & Company",
+      "type": "holding",
+      "repos": [{ "path": "~/clawd", "role": "workspace", "pm": null, "context": "home workspace" }]
+    },
+    "ctvs": {
+      "name": "Cotton Tree Venture Studios",
+      "type": "venture-studio",
+      "keywords": ["CTVS", "venture studio", "portfolio ops", "experiments"],
+      "repos": [
+        {
+          "path": "~/Documents/GitHub/cottontreevc",
+          "role": "web",
+          "pm": "npm",
+          "context": "venture studio ops site",
+          "vercelProject": "cottontreevc"
+        }
+      ]
+    },
+    "ctv": {
+      "name": "Cotton Tree Ventures",
+      "type": "investment",
+      "keywords": ["CTV", "fund", "LP", "investment"],
+      "repos": [
+        {
+          "path": "~/Documents/GitHub/cottontreevc",
+          "role": "web",
+          "pm": "npm",
+          "context": "investment vehicle site",
+          "vercelProject": "cottontreevc"
+        }
+      ]
+    },
+    "sahr-auto": {
+      "name": "Sahr Rhymes with Car",
+      "type": "business",
+      "keywords": ["Sahr Auto", "detailing", "bookings"],
+      "integrations": ["sahr-crm", "sahr-finance-sync", "sahr-scheduler"],
+      "repos": [
+        {
+          "path": "~/Documents/GitHub/sahr-rhymes-with-car",
+          "role": "web+api",
+          "pm": "npm",
+          "context": "detailing booking and CRM app",
+          "vercelProject": "sahr-rhymes-with-car"
+        }
+      ]
+    },
+    "ctribe": {
+      "name": "C-Tribe",
+      "type": "media-events",
+      "keywords": ["C-Tribe", "festival", "workspace", "OKR"],
+      "integrations": ["ctribe-api"],
+      "repos": [
+        {
+          "path": "~/Documents/GitHub/ctribe-event-web",
+          "role": "web",
+          "pm": "npm",
+          "context": "event web frontend",
+          "vercelProject": "ctribe-event-web"
+        },
+        {
+          "path": "~/Documents/GitHub/C-Tribe",
+          "role": "platform",
+          "pm": "npm",
+          "context": "core platform and API"
+        },
+        {
+          "path": "~/Documents/GitHub/sahrlicious",
+          "role": "bot",
+          "pm": "npm",
+          "context": "CT workflow bot"
+        }
+      ]
+    },
+    "ct-networks": {
+      "name": "CT Networks",
+      "type": "b2b-platform",
+      "keywords": ["CTN", "content engine", "hubspot", "seo"],
+      "integrations": ["hubspot-ct-networks"],
+      "repos": [
+        {
+          "path": "~/Documents/GitHub/ctnetworks-web-main",
+          "role": "web",
+          "pm": "npm",
+          "context": "marketing site",
+          "vercelProject": "ctnetworks-web-main"
+        },
+        {
+          "path": "~/Documents/GitHub/ctn-content-engine",
+          "role": "services",
+          "pm": "npm",
+          "context": "content engine"
+        }
+      ]
+    },
+    "cappsule": {
+      "name": "Cappsule",
+      "type": "product",
+      "keywords": ["Cappsule", "product"],
+      "repos": [
+        {
+          "path": "~/Documents/GitHub/cappsule",
+          "role": "web",
+          "pm": "npm",
+          "context": "product app"
+        }
+      ]
+    },
+    "revive-ai": {
+      "name": "Revive AI",
+      "type": "portfolio-co",
+      "keywords": ["Revive", "lead intelligence", "signals"],
+      "integrations": ["hubspot"],
+      "repos": [
+        {
+          "path": "~/clawd/revive-ai",
+          "role": "backend",
+          "pm": "npm",
+          "context": "AI backend services"
+        },
+        {
+          "path": "~/Documents/GitHub/project-houston",
+          "role": "frontend",
+          "pm": "pnpm",
+          "context": "frontend app",
+          "vercelProject": "project-houston"
+        }
+      ]
+    },
+    "bti": {
+      "name": "BlackTalent Initiative",
+      "type": "non-profit",
+      "keywords": ["BTI", "speakers", "ignite"],
+      "integrations": ["webflow"],
+      "repos": [
+        {
+          "path": "~/Documents/GitHub/evnt-ctn",
+          "role": "monorepo",
+          "pm": "pnpm",
+          "context": "event platform",
+          "vercelProject": "evnt-ctn"
+        }
+      ]
+    },
+    "nimbus": {
+      "name": "Nimbus Creative",
+      "type": "agency",
+      "keywords": ["Nimbus", "creative"],
+      "repos": []
+    }
+  }
+}

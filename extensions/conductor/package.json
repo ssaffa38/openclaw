@@ -1,0 +1,14 @@
+{
+  "name": "@openclaw/conductor",
+  "version": "2026.2.4",
+  "description": "OpenClaw multi-repo orchestration extension",
+  "type": "module",
+  "devDependencies": {
+    "openclaw": "workspace:*"
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}
