@@ -10,6 +10,7 @@ import { buildPrompt } from "../lib/prompt-builder.js";
 import { readRegistry, upsertTask } from "../lib/registry.js";
 import { slugifyTaskId } from "../lib/task-id.js";
 import { killSession, spawnClaudeSession } from "../lib/tmux.js";
+import { searchVault } from "../lib/vault-reader.js";
 import { prepareWorktree, removeWorktree } from "../lib/worktree.js";
 
 export function createSpawnAgentTool(api: OpenClawPluginApi) {
@@ -81,6 +82,18 @@ export function createSpawnAgentTool(api: OpenClawPluginApi) {
           pm: repo.pm,
         });
 
+        let vaultContext: string | undefined;
+        if (cfg.vaultPath) {
+          const searchTerms = [company.name];
+          if (company.keywords?.length) searchTerms.push(...company.keywords);
+          vaultContext =
+            (await searchVault({
+              vaultPath: cfg.vaultPath,
+              searchTerms,
+              maxTotalChars: cfg.vaultContextMaxChars,
+            }).catch(() => null)) ?? undefined;
+        }
+
         const prompt = await buildPrompt({
           companyId,
           company,
@@ -90,6 +103,7 @@ export function createSpawnAgentTool(api: OpenClawPluginApi) {
           baseBranch: prepared.baseBranch,
           branchName,
           repoSlug: prepared.repoSlug,
+          vaultContext,
         });
 
         task = {

@@ -20,6 +20,8 @@ const DEFAULTS: ResolvedConductorConfig = {
   morningReportEnabled: false,
   morningReportHourLocal: undefined,
   blogConfig: {},
+  vaultPath: undefined,
+  vaultContextMaxChars: 4000,
 };
 
 export function resolveConductorConfig(api: OpenClawPluginApi): ResolvedConductorConfig {
@@ -76,5 +78,13 @@ export function resolveConductorConfig(api: OpenClawPluginApi): ResolvedConducto
       pluginConfig.blogConfig && typeof pluginConfig.blogConfig === "object"
         ? pluginConfig.blogConfig
         : DEFAULTS.blogConfig,
+    vaultPath:
+      typeof pluginConfig.vaultPath === "string" && pluginConfig.vaultPath.trim()
+        ? api.resolvePath(pluginConfig.vaultPath.trim())
+        : DEFAULTS.vaultPath,
+    vaultContextMaxChars:
+      typeof pluginConfig.vaultContextMaxChars === "number" && pluginConfig.vaultContextMaxChars > 0
+        ? pluginConfig.vaultContextMaxChars
+        : DEFAULTS.vaultContextMaxChars,
   };
 }

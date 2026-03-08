@@ -41,7 +41,28 @@
       },
       "vercelScope": { "type": "string" },
       "morningReportEnabled": { "type": "boolean", "default": false },
-      "morningReportHourLocal": { "type": "number" }
+      "morningReportHourLocal": { "type": "number" },
+      "blogConfig": {
+        "type": "object",
+        "description": "Blog site configurations keyed by company slug",
+        "additionalProperties": {
+          "type": "object",
+          "properties": {
+            "apiBase": { "type": "string" },
+            "engineApiKey": { "type": "string" },
+            "enabled": { "type": "boolean" }
+          }
+        }
+      },
+      "vaultPath": {
+        "type": "string",
+        "description": "Path to Obsidian vault for business context injection into agent prompts"
+      },
+      "vaultContextMaxChars": {
+        "type": "number",
+        "default": 4000,
+        "description": "Max characters of vault context to inject per agent prompt"
+      }
     }
   }
 }

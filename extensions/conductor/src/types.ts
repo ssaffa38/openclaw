@@ -36,6 +36,8 @@ export type ConductorPluginConfig = {
   morningReportEnabled?: boolean;
   morningReportHourLocal?: number;
   blogConfig?: BlogConfig;
+  vaultPath?: string;
+  vaultContextMaxChars?: number;
 };
 
 export type CompanyRepo = {
@@ -195,4 +197,6 @@ export type ResolvedConductorConfig = {
   morningReportEnabled: boolean;
   morningReportHourLocal?: number;
   blogConfig: BlogConfig;
+  vaultPath?: string;
+  vaultContextMaxChars: number;
 };

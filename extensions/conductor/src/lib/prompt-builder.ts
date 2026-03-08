@@ -33,6 +33,7 @@ export async function buildPrompt(params: {
   baseBranch: string;
   branchName: string;
   repoSlug: string;
+  vaultContext?: string;
 }): Promise<string> {
   const repoInstructions = await loadRepoInstructions(params.repoPath);
   const lines = [
@@ -57,6 +58,10 @@ export async function buildPrompt(params: {
     lines.push(
       `Relevant integrations: ${[...(params.company.integrations ?? []), ...(params.repo.integrations ?? [])].join(", ")}`,
     );
+  }
+
+  if (params.vaultContext) {
+    lines.push("", params.vaultContext);
   }
 
   lines.push(
